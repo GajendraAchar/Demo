@@ -1,0 +1,41 @@
+---
+platform: linux
+
+jobs:
+- name: deploy-app
+  plan:
+  - get: pipeline-code
+  - put: app-chart
+    params:
+      chart: codecentric/keycloak
+      version: {{keycloak_chart_version}}
+      release: keycloak
+      values: pipeline-code/auth_/overrides/((env))/keycloak.yaml
+      replace: true
+      wait_until_ready: 900
+
+resources:
+- name: pipeline-code
+  type: git
+  source:
+    uri: git@github.com:eHealthAfrica/concourse-pipelines.git
+    branch: {{pipeline_branch}}
+    private_key: {{git_private_key}}
+
+- name: app-chart
+  type: helm
+  source:
+    cluster_ca: {{cluster_ca}}
+    cluster_url: {{cluster_url}}
+    token: {{token}}
+    namespace: auth-((env))
+    repos:
+    - name: codecentric
+      url: https://codecentric.github.io/helm-charts/
+
+resource_types:
+- name: helm
+  type: docker-image
+  source:
+    repository: typositoire/concourse-helm3-resource
+    tag: {{helm_tag3}}
