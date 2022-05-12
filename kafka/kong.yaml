@@ -1,0 +1,80 @@
+# Specify Kong configurations
+# Kong configurations guide https://getkong.org/docs/latest/configuration/
+image:
+  repository: ehealthafrica/kong
+  pullPolicy: Always
+
+ingressController:
+  enabled: false
+  installCRDs: false
+
+postgresql:
+  enabled: true
+  host: eha-kong-postgresql
+  existingSecret: eha-kong-postgresql
+  postgresqlUsername: kong
+  postgresqlDatabase: kong
+
+# Set env vars
+env:
+  plugins: bundled,kong-oidc-auth,prometheus
+  trusted_ips: '0.0.0.0/0,::/0'
+  database: "postgres"
+
+podAnnotations:
+  prometheus.io/scrape: "true" # Ask Prometheus to scrape the
+  prometheus.io/port: "8001"   # Kong pods for metrics
+
+admin:
+  enabled: true
+  http:
+    enabled: true
+
+# Kong proxy ingress settings.
+proxy:
+  # default timeout is 1m=60s, increase to 10m=600s
+  connect_timeout: 600000
+  read_timeout: 600000
+  write_timeout: 600000
+
+  tls:
+    enabled: false
+
+  type: NodePort
+  # Kong proxy ingress settings.
+  ingress:
+    # Enable/disable exposure using ingress.
+    enabled: true
+    # TLS secret name.
+    tls:
+    - hosts:
+      - kong-stage.eha.ng
+      secretName: kong-stage.eha.ng
+    # Array of ingress hosts.
+    hosts:
+      - kong-stage.eha.ng
+    # Map of ingress annotations.
+    annotations:
+      cert-manager.io/acme-challenge-type: dns01
+      cert-manager.io/acme-dns01-provider: route53
+      cert-manager.io/cluster-issuer: letsencrypt
+      ingress.kubernetes.io/ssl-redirect: "true"
+      kubernetes.io/ingress.class: "nginx"
+      kubernetes.io/tls-acme: "true"
+      monitor.stakater.com/enabled: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      nginx.ingress.kubernetes.io/enable-cors: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: "75M"
+      nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+      nginx.ingress.kubernetes.io/proxy-buffers: "16 128k"
+      nginx.ingress.kubernetes.io/proxy-large-client-header-buffers: "16 128k"
+      statuscake.monitor.stakater.com/contact-group: "DevOps"
+
+# Specifies whether ServiceMonitor for Prometheus operator should be created
+serviceMonitor:
+  enabled: false
+  interval: 10s
+  # Specifies namespace, where ServiceMonitor should be installed
+  namespace: monitoring-dev
+  labels:
+    prometheus: kube-prometheus

@@ -1,0 +1,71 @@
+provider:
+  gcp: true
+
+  keycloak:
+  replicas: 1
+
+image:
+  tag: 9.0.3
+
+postgresql:
+  enabled: true
+
+extraInitContainers: |
+  - name: theme-provider
+    image: ehealthafrica/keycloak-themes:0.0.4
+    imagePullPolicy: IfNotPresent
+    command:
+      - sh
+    args:
+      - -c
+      - |
+        echo "Copying eHealth theme..."
+        cp -R /themes/ehealth-theme/* /ehealth
+
+        echo "Copying aether theme..."
+        cp -R /themes/aether-theme/* /aether
+
+        echo "Copying planfeld theme..."
+        cp -R /themes/planfeld-theme/* /planfeld
+    volumeMounts:
+      - name: ehealth-theme
+        mountPath: /ehealth
+      - name: aether-theme
+        mountPath: /aether
+      - name: planfeld-theme
+        mountPath: /planfeld
+
+extraVolumeMounts: |
+  - name: ehealth-theme
+    mountPath: /opt/jboss/keycloak/themes/ehealth
+  - name: aether-theme
+    mountPath: /opt/jboss/keycloak/themes/aether
+  - name: planfeld-theme
+    mountPath: /opt/jboss/keycloak/themes/planfeld
+
+extraVolumes: |
+  - name: ehealth-theme
+    emptyDir: {}
+  - name: aether-theme
+    emptyDir: {}
+  - name: planfeld-theme
+    emptyDir: {}
+
+extraEnv: |
+  - name: DB_VENDOR
+    value: 'postgres'
+  - name: DB_ADDR
+    value: 'keycloak-postgresql'
+  - name: DB_PORT
+    value: '5432'
+  - name: DB_DATABASE
+    value: 'keycloak'
+  - name: DB_USER
+    value: 'keycloak'
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-postgresql
+        key: postgresql-password
+  - name: PROXY_ADDRESS_FORWARDING
+    value: 'true'

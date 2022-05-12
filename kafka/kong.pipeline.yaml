@@ -1,0 +1,42 @@
+---
+platform: linux
+
+jobs:
+- name: deploy-app
+  plan:
+  - get: pipeline-code
+  - put: app-chart
+    params:
+      chart: kong/kong
+      version: {{kong_chart_version}}
+      release: kong
+      values: pipeline-code/eha-care/overrides/((env))/kong.yaml
+      override_values:
+      - key: image.tag
+        value: {{kong_version}}
+
+resources:
+- name: pipeline-code
+  type: git
+  source:
+    uri: git@github.com:eHealthAfrica/concourse-pipelines.git
+    branch: {{pipeline_branch}}
+    private_key: {{git_private_key}}
+
+- name: app-chart
+  type: helm
+  source:
+    cluster_ca: {{cluster_ca}}
+    cluster_url: {{cluster_url}}
+    token: {{token}}
+    namespace: eha-care-stage
+    repos:
+    - name: kong
+      url: https://charts.konghq.com
+
+resource_types:
+- name: helm
+  type: docker-image
+  source:
+    repository: typositoire/concourse-helm3-resource
+    tag: {{helm_tag3}}
